@@ -1,21 +1,20 @@
-require("dotenv").config();
-const app = require("./app");
-const connectDb = require("./config/db.connect.js");
+import dotenv from 'dotenv';
+import app from './app.js';
+import connectDb from './config/db.connect.js';
+
+dotenv.config();
 
 const PORT = process.env.PORT || 4000;
 
 const startServer = async () => {
-     try {
-          // Connecting to database
-         await connectDb();
-
-          // Starting the server
-          app.listen(PORT, () => {
-               console.log(`Server is Running At http://localhost:${PORT}`);
-          });     
-     } catch (error) {
-          console.log("Error in connection: ", error);
-     }
-}
+    try {
+        await connectDb();
+        app.listen(PORT, () => {
+            console.log(`Server is Running At http://localhost:${PORT}`);
+        });
+    } catch (error) {
+        console.error("Error in connection: ", error);
+    }
+};
 
 startServer();

@@ -1,30 +1,39 @@
-const express = require("express");
-const cookieParser = require("cookie-parser");
-const cors = require("cors");
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import morgan from 'morgan';
+import userRoutes from './routes/user.routes.js';
+import errorMiddleware from './middlewares/error.middleware.js';
 
 const app = express();
 
-// Middleware to parse json
+// Middleware to parse JSON
 app.use(express.json());
 
-// Cors setup
+// CORS setup
 const allowedOrigins = process.env.FRONTEND_URL?.split(",") || ["http://localhost:3000"];
-
 app.use(cors({
-     origin: allowedOrigins,
-     credentials: true
+    origin: allowedOrigins,
+    credentials: true
 }));
 
-// cookie parser
+app.use(morgan("dev"));
+
+// Cookie parser
 app.use(cookieParser());
 
-// route
+// Routes
+app.use("/api/v1/user", userRoutes);
+
 app.get("/", (req, res) => {
-     res.send("Hello from Abhimanyu");
+    res.send("Hello from Abhimanyu");
 });
 
+app.use(errorMiddleware);
+
+// 404 handler (optional)
 // app.all('*', (req, res) => {
-//      res.status(404).send('OOPs !! 404 page not found');
+//     res.status(404).send('OOPs !! 404 page not found');
 // });
 
-module.exports = app;
+export default app;
