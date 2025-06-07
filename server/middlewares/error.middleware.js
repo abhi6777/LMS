@@ -1,14 +1,12 @@
-const { stack } = require("../app")
-
 const errorMiddleware = (error, req, res, next) => {
+    const statusCode = res.statusCode !== 200 ? res.statusCode : 500;
+    const message = error.message || "Something went wrong";
 
-     req.statusCode = req.statusCode || 500;
-     req.message = req.message || "Something went wrong";
-     return res.status(req.statusCode).json({
-          success: false,
-          message: req.message,
-          stack: error.stack
-     });
+    return res.status(statusCode).json({
+        success: false,
+        message,
+        stack: error.stack
+    });
 };
 
-module.exports = errorMiddleware;
+export default errorMiddleware;

@@ -1,23 +1,21 @@
-const appError = require("../utils/appError");
-const jwt = require("jsonwebtoken");
+import appError from '../utils/appError.js';
+import jwt from 'jsonwebtoken';
 
-const isLoggedIn = function(req, res, next) {
-     const { token } = req.cookies;
+const isLoggedIn = (req, res, next) => {
+    const { token } = req.cookies;
 
-     if(!token) {
-          return next(new appError("unauthenticated, please login: ", 401));
-     };
+    if (!token) {
+        return next(new appError("Unauthenticated, please login", 401));
+    }
 
-     const tokenDetails = jwt.verify(token, process.env.JWT_SECRET);
-     if(!tokenDetails) {
-          return next(new appError("No token found: ", 400));
-     };
+    const tokenDetails = jwt.verify(token, process.env.JWT_SECRET);
+    if (!tokenDetails) {
+        return next(new appError("Invalid token", 400));
+    }
 
-     req.user = tokenDetails;
+    req.user = tokenDetails;
 
-     next();
-}
+    next();
+};
 
-module.exports = {
-     isLoggedIn
-}
+export { isLoggedIn };
