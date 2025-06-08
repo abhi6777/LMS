@@ -3,6 +3,9 @@ import { User } from '../models/user.model.js';
 import cloudinary from 'cloudinary';
 import fs from 'fs/promises';
 import sendMail from '../utils/sendEmail.js';
+import crypto from 'crypto';
+import { error } from 'console';
+import { compare } from 'bcrypt';
 
 const cookieOptions = {
     secure: true,
@@ -181,9 +184,61 @@ const forgotPassword = async (req, res, next) => {
 
 const resetPassword = async (req, res, next) => {
     const { resetToken } = req.params;
+    const { password } = req.body;
 
+    const forgotPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
     
+    const user = await User.findOne({ forgotPasswordToken, forgotPasswordExpiry: { $gt: Date.now()} });
+
+    if (!user) {
+        return next(new appError("Token is invalid or expired, please try again ", 400));
+    };
+
+    user.password = password;
+    user.forgotPasswordExpiry = undefined;
+    user.forgotPasswordToken = undefined;
+
+    await user.save();
+
+    res.status(200).json({
+        success: true,
+        message: "password change successfully"
+    });
 };
+
+const changePassword = async (req, res, next) => {
+    const { oldPassword, newPassword } = req.body;
+    const { id } = req.user;
+
+    if(!oldPassword || !newPassword ) {
+        return next( new appError("All fields are mandatory", 400));
+    };
+
+    const user = await User.findById(id).select(+password);
+
+    if(!user) {
+        return next(new appError("user Does not exists", 400));
+    };
+
+    const isPasswordValid = await User.comparePassword(password);
+
+    if(!isPasswordValid) {
+        return next(new appError("Invalid old Password", 400));
+    };
+
+    user.password = newPassword;
+
+    user.save();
+
+    user.password = undefined;
+
+    res.status(200).json({
+        success: true,
+        message: "Password change successfully",
+        user
+    });
+};
+
 
 // Exporting to router.js
 export { register, login, logout, getProfile, forgotPassword, resetPassword };
