@@ -2,6 +2,7 @@ import appError from '../utils/appError.js';
 import { User } from '../models/user.model.js';
 import cloudinary from 'cloudinary';
 import fs from 'fs/promises';
+import sendMail from '../utils/sendEmail.js';
 
 const cookieOptions = {
     secure: true,
@@ -139,15 +140,50 @@ const getProfile = async (req, res, next) => {
     }
 };
 
-const forgotPassword = async (req, res, next) => {};
+const forgotPassword = async (req, res, next) => {
+    const { email } = req.body;
 
-const resetPassword = async (req, res, next) => {};
+    if(!email) {
+        return next(new appError("Email is required", 400));
+    };
 
-export {
-    register,
-    login,
-    logout,
-    getProfile,
-    forgotPassword,
-    resetPassword
+    const user = await User.findOne({ email });
+
+    if(!user){
+        return next(new appError("Email not registered", 400));
+    };
+
+    const resetToken = await user.generatePasswordToken();
+
+    await user.save();
+    
+    const resetPasswordUrl = `${process.env.FRONTEND_URL}/reset-Password/${resetToken}`;
+    const subject = `Reset Password`;
+    const message = `You can reset Password by clicking <a href=${resetPasswordUrl} target="_blank"> Reset your Password</a>\n If the above link does not does not work for some reason then copy paste this link in new tab ${resetPasswordUrl}.\n If you have not requested this , kindly inform us`;
+
+    console.log(resetPasswordUrl);
+    try {
+        // create send email address
+
+        await sendMail(email, subject, message);
+
+        res.status(200).json({
+            success: true,
+            message: `Reset password mail is sent to ${email} successfully`
+        })
+    } catch (error) {
+        user.forgotPasswordToken = undefined;
+        user.forgotPasswordExpiry = undefined;
+        await user.save();
+        return next(new appError(`${error.message}`, 400));
+    };
 };
+
+const resetPassword = async (req, res, next) => {
+    const { resetToken } = req.params;
+
+    
+};
+
+// Exporting to router.js
+export { register, login, logout, getProfile, forgotPassword, resetPassword };
