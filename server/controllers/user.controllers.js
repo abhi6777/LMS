@@ -4,8 +4,7 @@ import cloudinary from 'cloudinary';
 import fs from 'fs/promises';
 import sendMail from '../utils/sendEmail.js';
 import crypto from 'crypto';
-import { error } from 'console';
-import { compare } from 'bcrypt';
+import upload from '../middlewares/multer.middleware.js';
 
 const cookieOptions = {
     secure: true,
@@ -207,20 +206,24 @@ const resetPassword = async (req, res, next) => {
 };
 
 const changePassword = async (req, res, next) => {
-    const { oldPassword, newPassword } = req.body;
+    let { oldPassword, newPassword } = req.body;
     const { id } = req.user;
+
+    if (typeof oldPassword !== 'string') {
+        oldPassword = String(oldPassword);
+    };
 
     if(!oldPassword || !newPassword ) {
         return next( new appError("All fields are mandatory", 400));
     };
 
-    const user = await User.findById(id).select(+password);
+    const user = await User.findById(id).select("+password");
 
     if(!user) {
         return next(new appError("user Does not exists", 400));
     };
 
-    const isPasswordValid = await User.comparePassword(password);
+    const isPasswordValid = await user.comparePassword(oldPassword);
 
     if(!isPasswordValid) {
         return next(new appError("Invalid old Password", 400));
@@ -228,7 +231,7 @@ const changePassword = async (req, res, next) => {
 
     user.password = newPassword;
 
-    user.save();
+    await user.save();
 
     user.password = undefined;
 
@@ -239,6 +242,48 @@ const changePassword = async (req, res, next) => {
     });
 };
 
+const updateUser = async (req, res, next) => {
+    const { fullName } = req.body;
+    const { id } = req.user;
+
+    const user = await User.findById(id);
+
+    if (!user) {
+        return next( new appError("User does not exists", 400));
+    };
+
+    if (fullName) {
+        user.fullName = fullName;
+    };
+
+    if (req.file) {
+        await cloudinary.v2.uploader.destroy(user.avatar.public_id);
+
+        const result = await cloudinary.v2.uploader.upload(req.file.path, {
+            folder: 'lms',
+            width: '250',
+            height: '250',
+            gravity: 'faces',
+            crop: 'fill'
+        });
+
+        if (result) {
+            user.avatar.public_id = result.public_id;
+            user.avatar.secure_url = result.secure_url;
+
+            // remove file from the local server 
+            await fs.rm(`./uploads/${req.file.filename}`);
+        };
+    };
+
+    await user.save();
+
+    res.status(200).json({
+        success: true,
+        message: "User details updated successfully",
+        user
+    });
+};
 
 // Exporting to router.js
-export { register, login, logout, getProfile, forgotPassword, resetPassword };
+export { register, login, logout, getProfile, forgotPassword, resetPassword, changePassword, updateUser };
