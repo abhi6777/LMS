@@ -120,7 +120,6 @@ const deleteCourse = async (req, res, next) => {
           };
 
           const course = await Course.findById(courseId);
-          console.log(course);
 
           await Course.deleteOne({ _id: courseId})
 
