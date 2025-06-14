@@ -134,4 +134,56 @@ const deleteCourse = async (req, res, next) => {
      }
 };
 
-export { getAllCourses, getLectureByCourseId, createCourse, updateCourse, deleteCourse };
+const addLectureToCourseById = async (req, res, next) => {
+     try {
+          const { title, description } = req.body;
+
+          const { courseId } = req.params;
+
+          if(!title || !description ) {
+               return next(new appError(`Title and description are required`, 400));
+          };
+
+          const course = await Course.findById(courseId);
+
+          if (!course) {
+               return next(new appError(`Course with the given id is not matched`, 500));
+          };
+
+          const lectureData = {
+               title,
+               description,
+               lecture: {}
+          };
+
+          if (req.file) {
+               const result = await cloudinary.uploader.upload(req.file.path, {
+                    folder: 'lms'
+               });
+
+               if(result) {
+                    lectureData.lecture.public_id = result.public_id;
+                    lectureData.lecture.secure_url = result.secure_url;
+               };
+
+               fs.rm(`uploads/${req.file.filename}`);
+          };
+
+          course.lectures.push(lectureData);
+
+          course.numberOfLectures = course.lectures.length;
+
+          await course.save();
+
+          res.status(200).json({
+               success: true,
+               message: "Lecture added successfully",
+               course
+          });
+          
+     } catch (error) {
+          return next(new appError(`Adding Lecture failed ${error.message}`, 400));
+     }
+};
+
+export { getAllCourses, getLectureByCourseId, createCourse, updateCourse, deleteCourse, addLectureToCourseById };
