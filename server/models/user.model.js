@@ -36,7 +36,11 @@ const userSchema = new Schema({
         secure_url: String
     },
     forgotPasswordToken: String,
-    forgotPasswordExpiry: Date
+    forgotPasswordExpiry: Date,
+    subscription: {
+        id: String,
+        status: String
+    }
 }, {
     timestamps: true
 });
